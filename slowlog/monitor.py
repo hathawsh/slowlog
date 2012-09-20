@@ -111,14 +111,15 @@ def get_monitor():
     """Get the global Monitor and start it if it's not already running.
     """
     global _monitor
-    if _monitor is None:
+    m = _monitor
+    if m is None:
         _monitor_lock.acquire()
         try:
             if _monitor is None:
-                _monitor = Monitor()
-                _monitor.start()
+                _monitor = m = Monitor()
+                m.start()
             else:
                 pass  # pragma no cover
         finally:
             _monitor_lock.release()
-    return _monitor
+    return m

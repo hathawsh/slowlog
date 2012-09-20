@@ -14,7 +14,8 @@ more time than expected.
 The library works by creating a monitor thread.  Other threads add
 call loggers to the monitor thread and the monitor thread calls
 those loggers periodically if the call lasts longer than a timeout.
-The loggers gather stack traces using sys._current_frames().
+The sys._current_frames() function is used to gather stack traces, so
+not all Python implementations are supported.
 
 Usage
 =====

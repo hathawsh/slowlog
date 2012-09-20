@@ -1,9 +1,11 @@
 
 """Tests of slowlog.wsgi"""
 
-import time
-import thread
+import os
 import sys
+import tempfile
+import thread
+import time
 
 try:
     import unittest2 as unittest
@@ -18,7 +20,7 @@ class TestFrameStatsApp(unittest.TestCase):
         from slowlog.wsgi import FrameStatsApp
         return FrameStatsApp
 
-    def _make(self, settings=None, app_error=None):
+    def _make(self, app_error=None):
         self.ops = ops = []
 
         def dummy_app(environ, start_response):
@@ -107,7 +109,7 @@ class TestSlowLogApp(unittest.TestCase):
         from slowlog.wsgi import SlowLogApp
         return SlowLogApp
 
-    def _make(self, settings=None, app_error=None):
+    def _make(self, app_error=None, **kw):
         self.ops = ops = []
 
         def dummy_app(environ, start_response):
@@ -124,14 +126,29 @@ class TestSlowLogApp(unittest.TestCase):
             def remove(self, reporter):
                 ops.append(('remove', reporter))
 
-        obj = self._class(dummy_app)
+        obj = self._class(dummy_app, **kw)
         obj.get_monitor = DummyMonitor
         return obj
 
-    def test_ctor(self):
+    def test_ctor_with_default_settings(self):
         obj = self._make()
         self.assertEqual(obj.timeout, 2.0)
         self.assertEqual(obj.interval, 1.0)
+        self.assertEqual(obj.log.name, 'slowlog')
+        self.assertFalse(obj.log.handlers)
+
+    def test_ctor_with_custom_settings(self):
+        f = tempfile.NamedTemporaryFile(delete=False)
+        fn = f.name
+        f.close()
+        try:
+            obj = self._make(timeout=1.9, interval=0.25, logfile=fn)
+            self.assertEqual(obj.timeout, 1.9)
+            self.assertEqual(obj.interval, 0.25)
+            self.assertEqual(obj.log.name, 'slowlog')
+            self.assertTrue(obj.log.handlers)
+        finally:
+            os.remove(fn)
 
     def test_call_without_app_error(self):
         obj = self._make()
@@ -199,7 +216,7 @@ class TestSlowRequestLogger(unittest.TestCase):
         from slowlog.wsgi import SlowRequestLogger
         return SlowRequestLogger
 
-    def _make(self, ident=None, request_method='POST'):
+    def _make(self, ident=None):
         self.logged = logged = []
 
         class DummyLogger:

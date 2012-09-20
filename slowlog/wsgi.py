@@ -2,6 +2,7 @@
 from cStringIO import StringIO
 from pprint import pformat
 from slowlog.framestats import FrameStatsReporter
+from slowlog.logfile import make_file_logger
 from slowlog.monitor import get_monitor
 from thread import get_ident
 import logging
@@ -16,8 +17,7 @@ class FrameStatsApp(object):
     """WSGI app that logs Python frames involved in slow requests to statsd.
 
     Increments a counter for each frame currently involved in the request.
-    The theory is that the counters for slow frames will increase faster
-    than fast frames.
+    Counters for slow code will increase more quickly than fast code.
     """
     def __init__(self, next_app, timeout=2.0, interval=0.1):
         self.next_app = next_app
@@ -46,12 +46,15 @@ def make_framestats(next_app, _globals, **kw):
 class SlowLogApp(object):
     """Log slow requests in a manner similar to Products.LongRequestLogger.
     """
-    def __init__(self, next_app, timeout=2.0, interval=1.0, log=default_log,
+    def __init__(self, next_app, timeout=2.0, interval=1.0, logfile=None,
                  hide_env=('HTTP_COOKIE', 'paste.cookies', 'beaker.session')):
         self.next_app = next_app
         self.timeout = timeout
         self.interval = interval
-        self.log = log
+        if logfile:
+            self.log = make_file_logger(logfile)
+        else:
+            self.log = logging.getLogger('slowlog')
         self.hide_env = hide_env
         self.get_monitor = get_monitor  # test hook
 
@@ -73,8 +76,9 @@ def make_slowlog(next_app, _globals, **kw):
     interval = float(kw.get('interval', 1.0))
     hide_env = kw.get('hide_env',
                       'HTTP_COOKIE paste.cookies beaker.session').split()
+    logfile = kw.get('file')
     return SlowLogApp(next_app, timeout=timeout, interval=interval,
-                      hide_env=hide_env)
+                      hide_env=hide_env, logfile=logfile)
 
 
 class SlowRequestLogger(object):

@@ -1,8 +1,10 @@
 
 """Tests of slowlog.tween"""
+import os
+import sys
+import tempfile
 import thread
 import time
-import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -124,12 +126,23 @@ class TestSlowLogTween(unittest.TestCase):
         obj = self._make()
         self.assertEqual(obj.timeout, 2.0)
         self.assertEqual(obj.interval, 1.0)
+        self.assertEqual(obj.log.name, 'slowlog')
+        self.assertFalse(obj.log.handlers)
 
     def test_ctor_with_custom_settings(self):
-        obj = self._make(settings={'slowlog_timeout': '2.1',
-                                   'slowlog_interval': '0.125'})
-        self.assertEqual(obj.timeout, 2.1)
-        self.assertEqual(obj.interval, 0.125)
+        f = tempfile.NamedTemporaryFile(delete=False)
+        fn = f.name
+        f.close()
+        try:
+            obj = self._make(settings={'slowlog_timeout': '2.1',
+                                       'slowlog_interval': '0.125',
+                                       'slowlog_file': fn})
+            self.assertEqual(obj.timeout, 2.1)
+            self.assertEqual(obj.interval, 0.125)
+            self.assertEqual(obj.log.name, 'slowlog')
+            self.assertTrue(obj.log.handlers)
+        finally:
+            os.remove(fn)
 
     def test_call_without_handler_error(self):
         obj = self._make()
