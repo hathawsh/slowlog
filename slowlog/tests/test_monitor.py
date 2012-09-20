@@ -29,11 +29,11 @@ class TestMonitor(unittest.TestCase):
         class DummyReporter:
             def __init__(self):
                 self.report_at = report_at
+                self.interval = 10.0
                 self.ident = ident
 
-            def __call__(self, frame):
-                reported.append(frame)
-                self.report_at += 30.0
+            def __call__(self, report_time, frame):
+                reported.append((report_time, frame))
                 if report_error is not None:
                     raise report_error
 
@@ -121,27 +121,27 @@ class TestMonitor(unittest.TestCase):
         self.assertGreater(t, 0)
         self.assertLess(t, 1800.0)
 
-    def test_run_with_an_immediate_reporters(self):
-        now = time.time()
+    def test_run_with_ready_reporters(self):
         obj = self._make()
         obj.queue = self._make_nosleep_queue()
 
-        reporter1 = self._make_reporter(report_at=now)
+        reporter1 = self._make_reporter(report_at=1233.9)
         obj.reporters.add(reporter1)
-        reporter2 = self._make_reporter(report_at=now)
+        reporter2 = self._make_reporter(report_at=1233.8)
         obj.reporters.add(reporter2)
 
-        obj.run()
+        obj.run(time=lambda: 1234.0)
 
         self.assertEqual(len(self.reported), 2)
-        self.assertEqual(self.reported, [None, None])
+        self.assertEqual(self.reported, [(1234.0, None), (1234.0, None)])
 
         self.assertEqual(len(self.queue_gets), 1)
         t = self.queue_gets[0][1]
         self.assertGreater(t, 0)
         self.assertLess(t, 1800.0)
 
-    def test_run_with_call_frame(self):
+    def test_run_with_real_frame(self):
+        # Start a thread and sample a frame from it.
         from Queue import Queue
         import thread
 
@@ -157,43 +157,38 @@ class TestMonitor(unittest.TestCase):
             ident = start_queue.get()  # Wait for the thread to start.
             obj = self._make()
             obj.queue = self._make_nosleep_queue()
-            now = time.time()
-            reporter = self._make_reporter(report_at=now, ident=ident)
+            reporter = self._make_reporter(report_at=1234.0, ident=ident)
             obj.reporters.add(reporter)
-            obj.run()
+            obj.run(time=lambda: 1234.1)
         finally:
             end_queue.put(None)  # Let the thread end.
 
         self.assertEqual(len(self.reported), 1)
-        frame = self.reported[0]
+        report_time, frame = self.reported[0]
+        self.assertEqual(report_time, 1234.1)
         self.assertIsNotNone(frame)
         self.assertIsNotNone(frame.f_code.co_filename)
         self.assertIsNotNone(frame.f_code.co_name)
 
         self.assertEqual(len(self.queue_gets), 1)
         t = self.queue_gets[0][1]
-        self.assertGreater(t, 20.0)
-        self.assertLess(t, 30.0)
+        self.assertEqual(t, 10.0)
 
     def test_run_with_broken_reporter(self):
-        now = time.time()
         obj = self._make()
         obj.queue = self._make_nosleep_queue()
 
-        reporter = self._make_reporter(report_at=now,
+        reporter = self._make_reporter(report_at=1234.0,
                                        report_error=ValueError('synthetic'))
         obj.reporters.add(reporter)
 
-        obj.run()
+        obj.run(time=lambda: 1234.0)
 
-        self.assertEqual(len(self.reported), 1)
-        frame = self.reported[0]
-        self.assertIsNone(frame)
+        self.assertEqual(self.reported, [(1234.0, None)])
 
         self.assertEqual(len(self.queue_gets), 1)
         t = self.queue_gets[0][1]
-        self.assertGreater(t, 20.0)
-        self.assertLess(t, 30.0)
+        self.assertEqual(t, 10.0)
 
     def test_run_when_timeout_reached(self):
         from Queue import Empty
@@ -212,28 +207,16 @@ class TestMonitor(unittest.TestCase):
                 else:
                     raise item
 
-        now = time.time()
         obj = self._make()
         obj.queue = DummyQueue()
 
-        reporter = self._make_reporter(report_at=now)
+        reporter = self._make_reporter(report_at=1234.0)
         obj.reporters.add(reporter)
 
-        obj.run()
+        obj.run(time=lambda: 1234.0)
 
-        self.assertEqual(len(self.reported), 1)
-        frame = self.reported[0]
-        self.assertIsNone(frame)
-
-        self.assertEqual(len(queue_gets), 2)
-
-        t = queue_gets[0][1]
-        self.assertGreater(t, 20.0)
-        self.assertLess(t, 30.0)
-
-        t = queue_gets[1][1]
-        self.assertGreater(t, 20.0)
-        self.assertLess(t, 30.0)
+        self.assertEqual(self.reported, [(1234.0, None)])
+        self.assertEqual(queue_gets, [(True, 10.0), (True, 10.0)])
 
 
 class Test_get_monitor(unittest.TestCase):

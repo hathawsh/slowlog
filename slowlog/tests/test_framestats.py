@@ -1,7 +1,6 @@
 
 from perfmetrics import statsd_client_stack
 import thread
-import time
 
 try:
     import unittest2 as unittest
@@ -36,7 +35,6 @@ class Test_report_framestats(unittest.TestCase):
     def _make_frame_stack(self, length):
         class DummyCode:
             def __init__(self, i):
-                self.co_filename = 'dummy_filename_%d' % i
                 self.co_name = 'dummy_name_%d' % i
 
         class DummyFrame:
@@ -44,6 +42,7 @@ class Test_report_framestats(unittest.TestCase):
 
             def __init__(self, i):
                 self.f_code = DummyCode(i)
+                self.f_globals = {'__name__': 'dummy.module%d' % i}
 
         current_frame = None
         f = None
@@ -72,12 +71,12 @@ class Test_report_framestats(unittest.TestCase):
         frame = self._make_frame_stack(3)
         self._call(frame)
         self.assertEqual(len(self.sentbufs), 1)
-        expect = ['slowlog.dummy_filename_3.dummy_name_3|c',
-                  'slowlog._.dummy_filename_3_dummy_name_3|c',
-                  'slowlog.dummy_filename_2.dummy_name_2|c',
-                  'slowlog._.dummy_filename_2_dummy_name_2|c',
-                  'slowlog.dummy_filename_1.dummy_name_1|c',
-                  'slowlog._.dummy_filename_1_dummy_name_1|c',
+        expect = ['slowlog.dummy.module3.dummy_name_3|c',
+                  'slowlog._.dummy_module3_dummy_name_3|c',
+                  'slowlog.dummy.module2.dummy_name_2|c',
+                  'slowlog._.dummy_module2_dummy_name_2|c',
+                  'slowlog.dummy.module1.dummy_name_1|c',
+                  'slowlog._.dummy_module1_dummy_name_1|c',
                   ]
         self.assertEqual(self.sentbufs[0].splitlines(), expect)
 
@@ -88,10 +87,24 @@ class Test_report_framestats(unittest.TestCase):
         self.assertEqual(len(self.sentbufs), 2)
         # Send innermost frames first because they are probably more
         # important.
-        self.assertIn('slowlog._.dummy_filename_20_dummy_name_20|c',
+        self.assertIn('slowlog.dummy.module20.dummy_name_20|c',
                       self.sentbufs[0])
-        self.assertIn('slowlog._.dummy_filename_1_dummy_name_1|c',
+        self.assertIn('slowlog.dummy.module1.dummy_name_1|c',
                       self.sentbufs[1])
+
+    def test_with_frame_lacking_module_name(self):
+        # Skip over frames that don't have a module name.
+        self._register_statsd_client()
+        frame = self._make_frame_stack(3)
+        frame.f_back.f_globals = {}
+        self._call(frame)
+        self.assertEqual(len(self.sentbufs), 1)
+        expect = ['slowlog.dummy.module3.dummy_name_3|c',
+                  'slowlog._.dummy_module3_dummy_name_3|c',
+                  'slowlog.dummy.module1.dummy_name_1|c',
+                  'slowlog._.dummy_module1_dummy_name_1|c',
+                  ]
+        self.assertEqual(self.sentbufs[0].splitlines(), expect)
 
 
 class TestFrameStatsReporter(unittest.TestCase):
@@ -114,21 +127,17 @@ class TestFrameStatsReporter(unittest.TestCase):
         self.assertEqual(obj.ident, 54321)
 
     def test_call_without_frame(self):
-        obj = self._class(123456789, 1.5)
-        now = time.time()
-        obj()
-        self.assertGreater(obj.report_at, now)
+        obj = self._class(123456789.0, 1.5)
+        obj(123456789.0)
 
     def test_call_with_frame(self):
         reported = []
 
-        def report_framestats(frame):
-            reported.append(frame)
+        def report_framestats(frame, limit):
+            reported.append((frame, limit))
 
-        reporter = self._class(123456789, 1.5)
+        reporter = self._class(123456789.0, 1.5)
         frame = object()
-        now = time.time()
-        reporter(frame, report_framestats=report_framestats)
-        self.assertGreater(reporter.report_at, now)
+        reporter(123456789.0, frame, report_framestats=report_framestats)
         self.assertEqual(len(reported), 1)
-        self.assertIs(reported[0], frame)
+        self.assertEqual(reported[0], (frame, 100))

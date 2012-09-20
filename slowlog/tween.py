@@ -20,13 +20,15 @@ class FrameStatsTween(object):
         self.handler = handler
         settings = registry.settings
         self.timeout = float(settings.get('framestats_timeout', 2.0))
-        self.interval = float(settings.get('framestats_interval', 0.1))
+        self.interval = float(settings.get('framestats_interval', 1.0))
+        self.frame_limit = int(settings.get('framestats_limit', 100))
         self.get_monitor = get_monitor  # testing hook
 
     def __call__(self, request):
         monitor = self.get_monitor()
         report_at = time.time() + self.timeout
-        reporter = FrameStatsReporter(report_at, self.interval)
+        reporter = FrameStatsReporter(report_at, self.interval,
+                                      self.frame_limit)
         monitor.add(reporter)
         try:
             return self.handler(request)
@@ -77,11 +79,10 @@ class TweenRequestLogger(object):
         if ident is None:
             ident = get_ident()
         self.ident = ident
+        self.interval = tween.interval
 
-    def __call__(self, frame=None):
-        now = time.time()
-        self.report_at = now + self.tween.interval
-        elapsed = now - self.start
+    def __call__(self, report_time, frame=None):
+        elapsed = report_time - self.start
         request = self.request
         lines = ['request: %s %s' % (request.method, request.url)]
 

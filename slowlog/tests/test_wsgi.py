@@ -44,7 +44,7 @@ class TestFrameStatsApp(unittest.TestCase):
     def test_ctor(self):
         obj = self._make()
         self.assertEqual(obj.timeout, 2.0)
-        self.assertEqual(obj.interval, 0.1)
+        self.assertEqual(obj.interval, 1.0)
 
     def test_call_without_app_error(self):
         obj = self._make()
@@ -253,7 +253,7 @@ class TestSlowRequestLogger(unittest.TestCase):
 
     def test_call_with_first_report(self):
         obj = self._make()
-        obj()
+        obj(123456789.0)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertIn('<hidden>', self.logged[0])
@@ -262,7 +262,7 @@ class TestSlowRequestLogger(unittest.TestCase):
     def test_call_with_subsequent_report(self):
         obj = self._make()
         obj.logged_first = True
-        obj()
+        obj(123456789.0)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertNotIn('<hidden>', self.logged[0])
@@ -271,7 +271,7 @@ class TestSlowRequestLogger(unittest.TestCase):
     def test_call_with_traceback_shown(self):
         obj = self._make()
         frame = sys._getframe()
-        obj(frame)
+        obj(123456789.0, frame)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertIn('Traceback:', self.logged[0])
@@ -279,7 +279,7 @@ class TestSlowRequestLogger(unittest.TestCase):
     def test_call_with_traceback_hidden(self):
         obj = self._make(frame_limit=0)
         frame = sys._getframe()
-        obj(frame)
+        obj(123456789.0, frame)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertNotIn('Traceback:', self.logged[0])

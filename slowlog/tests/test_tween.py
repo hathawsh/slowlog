@@ -46,7 +46,7 @@ class TestFrameStatsTween(unittest.TestCase):
     def test_ctor_with_default_settings(self):
         obj = self._make()
         self.assertEqual(obj.timeout, 2.0)
-        self.assertEqual(obj.interval, 0.1)
+        self.assertEqual(obj.interval, 1.0)
 
     def test_ctor_with_custom_settings(self):
         obj = self._make(settings={'framestats_timeout': '2.1',
@@ -227,7 +227,7 @@ class TestTweenRequestLogger(unittest.TestCase):
 
     def test_call_with_first_report_as_post(self):
         obj = self._make()
-        obj()
+        obj(123456789.0)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertIn('<hidden>', self.logged[0])
@@ -235,7 +235,7 @@ class TestTweenRequestLogger(unittest.TestCase):
 
     def test_call_with_first_report_as_get(self):
         obj = self._make(method='GET')
-        obj()
+        obj(123456789.0)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('GET http://example.com/stuff?x=1', self.logged[0])
         self.assertNotIn('<hidden>', self.logged[0])
@@ -244,7 +244,7 @@ class TestTweenRequestLogger(unittest.TestCase):
     def test_call_with_subsequent_report(self):
         obj = self._make()
         obj.logged_first = True
-        obj()
+        obj(123456789.0)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertNotIn('<hidden>', self.logged[0])
@@ -253,7 +253,7 @@ class TestTweenRequestLogger(unittest.TestCase):
     def test_call_with_traceback_shown(self):
         obj = self._make()
         frame = sys._getframe()
-        obj(frame)
+        obj(123456789.0, frame)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertIn('Traceback:', self.logged[0])
@@ -261,7 +261,7 @@ class TestTweenRequestLogger(unittest.TestCase):
     def test_call_with_traceback_hidden(self):
         obj = self._make(frame_limit=0)
         frame = sys._getframe()
-        obj(frame)
+        obj(123456789.0, frame)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertNotIn('Traceback:', self.logged[0])

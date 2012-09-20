@@ -14,15 +14,19 @@ class ReporterInterface(object):
     """The interface of Reporter objects.
 
     Create an object that provides this interface, then add it to the
-    current Monitor before doing something; remove it when done.
+    current Monitor before doing something that needs to be monitored;
+    remove the reporter when done.
     """
-    ident = 0      # thread.get_ident()
-    report_at = 0  # a Unix time
+    ident = 0       # thread.get_ident()
+    report_at = 0   # a Unix time
+    interval = 1.0  # Seconds between reports (after report_at)
 
-    def __call__(self, frame=None):  # pragma no cover
+    def __call__(self, report_time, frame=None):  # pragma no cover
         """Report the thread's current activity.
 
         This may include logging the stack or reporting statistics.
+        The frame, if given, represents the thread state close to
+        report_time.
         """
 
 
@@ -45,7 +49,7 @@ class Monitor(Thread):
         """Remove a Reporter."""
         self.queue.put((reporter, False))
 
-    def run(self):
+    def run(self, time=time.time):
         try:
             queue = self.queue
 
@@ -54,22 +58,24 @@ class Monitor(Thread):
                     block = False
                     timeout = None
                 elif self.reporters:
-                    now = time.time()
-                    timeout_at = now + 3600.0
+                    report_time = time()
+                    timeout_at = report_time + 3600.0
                     frames = None
                     for reporter in self.reporters:
-                        if now >= reporter.report_at:
+                        if report_time >= reporter.report_at:
                             if frames is None:
                                 frames = sys._current_frames()
                             frame = frames.get(reporter.ident)
                             try:
-                                reporter(frame)
+                                reporter.report_at = (report_time +
+                                                      reporter.interval)
+                                reporter(report_time, frame)
                             except Exception:
                                 log.exception("Error in reporter %s", reporter)
                         timeout_at = min(timeout_at, reporter.report_at)
                     frames = None  # Free memory
                     block = True
-                    timeout = max(self.min_interval, timeout_at - now)
+                    timeout = max(self.min_interval, timeout_at - report_time)
                 else:
                     # Wait for a reporter.
                     block = True

@@ -19,16 +19,18 @@ class FrameStatsApp(object):
     Increments a counter for each frame currently involved in the request.
     Counters for slow code will increase more quickly than fast code.
     """
-    def __init__(self, next_app, timeout=2.0, interval=0.1):
+    def __init__(self, next_app, timeout=2.0, interval=1.0, frame_limit=100):
         self.next_app = next_app
         self.timeout = timeout
         self.interval = interval
+        self.frame_limit = frame_limit
         self.get_monitor = get_monitor  # test hook
 
     def __call__(self, environ, start_response):
         monitor = self.get_monitor()
         report_at = time.time() + self.timeout
-        reporter = FrameStatsReporter(report_at, self.interval)
+        reporter = FrameStatsReporter(report_at, self.interval,
+                                      self.frame_limit)
         monitor.add(reporter)
         try:
             return self.next_app(environ, start_response)
@@ -39,7 +41,7 @@ class FrameStatsApp(object):
 def make_framestats(next_app, _globals, **kw):
     """Paste entry point for creating a FrameStatsApp"""
     timeout = float(kw.get('timeout', 2.0))
-    interval = float(kw.get('interval', 0.1))
+    interval = float(kw.get('interval', 1.0))
     return FrameStatsApp(next_app, timeout=timeout, interval=interval)
 
 
@@ -95,11 +97,10 @@ class SlowRequestLogger(object):
         if ident is None:
             ident = get_ident()
         self.ident = ident
+        self.interval = app.interval
 
-    def __call__(self, frame=None):
-        now = time.time()
-        self.report_at = now + self.app.interval
-        elapsed = now - self.start
+    def __call__(self, report_time, frame=None):
+        elapsed = report_time - self.start
         env = self.environ
         url = construct_url(env)
         lines = ['request: %s %s' % (env.get('REQUEST_METHOD'), url)]
