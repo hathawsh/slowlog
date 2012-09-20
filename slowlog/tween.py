@@ -19,10 +19,10 @@ class FrameStatsTween(object):
         settings = registry.settings
         self.timeout = float(settings.get('framestats_timeout', 2.0))
         self.interval = float(settings.get('framestats_interval', 0.1))
+        self.get_monitor = get_monitor  # testing hook
 
-    def __call__(self, request, monitor=None):
-        if monitor is None:
-            monitor = get_monitor()
+    def __call__(self, request):
+        monitor = self.get_monitor()
         report_at = time.time() + self.timeout
         reporter = FrameStatsReporter(report_at, self.interval)
         monitor.add(reporter)
@@ -44,10 +44,10 @@ class SlowLogTween(object):
         default_hide = 'password'
         self.hide_post_vars = settings.get('slowlog_hide_post_vars',
                                            default_hide).split()
+        self.get_monitor = get_monitor  # testing hook
 
     def __call__(self, request, monitor=None):
-        if monitor is None:
-            monitor = get_monitor()
+        monitor = self.get_monitor()
         now = time.time()
         report_at = now + self.timeout
         logger = TweenRequestLogger(self, request, now, report_at)
@@ -59,6 +59,7 @@ class SlowLogTween(object):
 
 
 class TweenRequestLogger(object):
+    """Logger for a particular request"""
     logged_first = False
 
     def __init__(self, tween, request, start, report_at, ident=None):
@@ -81,7 +82,7 @@ class TweenRequestLogger(object):
             if request.POST:
                 post = {}
                 post.update(request.POST)
-                for key in self.tween.hide_env:
+                for key in self.tween.hide_post_vars:
                     if key in post:
                         post[key] = Hidden()
                 lines.append('post: %s' % pformat(post))
@@ -95,9 +96,10 @@ class TweenRequestLogger(object):
             lines.append(tb.getvalue())
 
         log = self.tween.log
+        msg = '\n'.join(lines)
         log.warning("Thread %s: Started on %.1f; "
                     "Running for %.1f secs; %s",
-                    self.ident, self.start, elapsed, '\n'.join(lines))
+                    self.ident, self.start, elapsed, msg)
 
 
 class Hidden(object):
