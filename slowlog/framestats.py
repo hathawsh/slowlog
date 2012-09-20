@@ -4,7 +4,7 @@ from thread import get_ident
 import time
 
 
-def log_framestats(frame, max_buf=1000):
+def report_framestats(frame, max_buf=1000):
     """Send info about a frame to the configured Statsd server"""
     client = statsd_client()
     if client is None:
@@ -17,7 +17,8 @@ def log_framestats(frame, max_buf=1000):
         co = f.f_code
         name = '%s.%s' % (co.co_filename, co.co_name)
         # Record the frame stats in 2 forms, hierarchical and flat, to make
-        # the stats easy to browse.  Notice how "flat" the underscore is. ;-)
+        # the stats easy to browse.
+        # Notice how "flat" the underscore character is. ;-)
         client.incr('slowlog.%s' % name, buf=buf)
         client.incr('slowlog._.%s' % name.replace('.', '_'), buf=buf)
         bytecount += len(buf[-2]) + len(buf[-1]) + 2
@@ -31,18 +32,18 @@ def log_framestats(frame, max_buf=1000):
         client.sendbuf(buf)
 
 
-class FrameStatsLogger(object):
-    """ThreadLogger that calls log_framestats"""
+class FrameStatsReporter(object):
+    """Reporter that calls report_framestats"""
 
-    def __init__(self, log_at, interval, ident=None):
-        self.log_at = log_at
+    def __init__(self, report_at, interval, ident=None):
+        self.report_at = report_at
         self.interval = interval
         if ident is None:
             ident = get_ident()
         self.ident = ident
 
-    def log(self, frame=None):
+    def __call__(self, frame=None, report_framestats=report_framestats):
         now = time.time()
-        self.log_at = now + self.interval
+        self.report_at = now + self.interval
         if frame is not None:
-            log_framestats(frame)
+            report_framestats(frame)

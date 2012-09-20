@@ -1,7 +1,7 @@
 
 from cStringIO import StringIO
 from pprint import pformat
-from slowlog.framestats import FrameStatsLogger
+from slowlog.framestats import FrameStatsReporter
 from slowlog.monitor import get_monitor
 from thread import get_ident
 import logging
@@ -23,13 +23,13 @@ class FrameStatsTween(object):
     def __call__(self, request, monitor=None):
         if monitor is None:
             monitor = get_monitor()
-        log_at = time.time() + self.timeout
-        logger = FrameStatsLogger(log_at, self.interval)
-        monitor.add(logger)
+        report_at = time.time() + self.timeout
+        reporter = FrameStatsReporter(report_at, self.interval)
+        monitor.add(reporter)
         try:
             return self.handler(request)
         finally:
-            monitor.remove(logger)
+            monitor.remove(reporter)
 
 
 class SlowLogTween(object):
@@ -49,8 +49,8 @@ class SlowLogTween(object):
         if monitor is None:
             monitor = get_monitor()
         now = time.time()
-        log_at = now + self.timeout
-        logger = TweenRequestLogger(self, request, now, log_at)
+        report_at = now + self.timeout
+        logger = TweenRequestLogger(self, request, now, report_at)
         monitor.add(logger)
         try:
             return self.handler(request)
@@ -61,18 +61,18 @@ class SlowLogTween(object):
 class TweenRequestLogger(object):
     logged_first = False
 
-    def __init__(self, tween, request, start, log_at, ident=None):
+    def __init__(self, tween, request, start, report_at, ident=None):
         self.tween = tween
         self.request = request
         self.start = start
-        self.log_at = log_at
+        self.report_at = report_at
         if ident is None:
             ident = get_ident()
         self.ident = ident
 
-    def log(self, frame=None):
+    def __call__(self, frame=None):
         now = time.time()
-        self.log_at = now + self.tween.log_interval
+        self.report_at = now + self.tween.log_interval
         elapsed = now - self.start
         request = self.request
         lines = ['request: %s %s' % (request.request_method, request.url)]
