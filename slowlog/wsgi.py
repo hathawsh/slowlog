@@ -23,10 +23,10 @@ class FrameStatsApp(object):
         self.next_app = next_app
         self.timeout = timeout
         self.interval = interval
+        self.get_monitor = get_monitor  # test hook
 
-    def __call__(self, environ, start_response, monitor=None):
-        if monitor is None:
-            monitor = get_monitor()
+    def __call__(self, environ, start_response):
+        monitor = self.get_monitor()
         report_at = time.time() + self.timeout
         reporter = FrameStatsReporter(report_at, self.interval)
         monitor.add(reporter)
@@ -53,10 +53,10 @@ class SlowLogApp(object):
         self.interval = interval
         self.log = log
         self.hide_env = hide_env
+        self.get_monitor = get_monitor  # test hook
 
-    def __call__(self, environ, start_response, monitor=None):
-        if monitor is None:
-            monitor = get_monitor()
+    def __call__(self, environ, start_response):
+        monitor = self.get_monitor()
         now = time.time()
         report_at = now + self.timeout
         logger = SlowRequestLogger(self, environ, now, report_at)
@@ -70,7 +70,7 @@ class SlowLogApp(object):
 def make_slowlog(next_app, _globals, **kw):
     """Paste entry point for creating a SlowLogApp"""
     timeout = float(kw.get('timeout', 2.0))
-    interval = float(kw.get('interval', 0.1))
+    interval = float(kw.get('interval', 1.0))
     hide_env = kw.get('hide_env',
                       'HTTP_COOKIE paste.cookies beaker.session').split()
     return SlowLogApp(next_app, timeout=timeout, interval=interval,
@@ -78,6 +78,7 @@ def make_slowlog(next_app, _globals, **kw):
 
 
 class SlowRequestLogger(object):
+    """Logger for a particular request"""
     logged_first = False
 
     def __init__(self, app, environ, start, report_at, ident=None):
