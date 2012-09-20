@@ -79,10 +79,10 @@ class TweenRequestLogger(object):
 
     def __call__(self, frame=None):
         now = time.time()
-        self.report_at = now + self.tween.log_interval
+        self.report_at = now + self.tween.interval
         elapsed = now - self.start
         request = self.request
-        lines = ['request: %s %s' % (request.request_method, request.url)]
+        lines = ['request: %s %s' % (request.method, request.url)]
 
         if not self.logged_first:
             if request.POST:

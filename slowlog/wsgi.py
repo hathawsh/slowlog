@@ -96,7 +96,7 @@ class SlowRequestLogger(object):
 
     def __call__(self, frame=None):
         now = time.time()
-        self.report_at = now + self.app.log_interval
+        self.report_at = now + self.app.interval
         elapsed = now - self.start
         env = self.environ
         url = construct_url(env)

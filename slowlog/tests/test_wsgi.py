@@ -224,7 +224,7 @@ class TestSlowRequestLogger(unittest.TestCase):
                 logged.append(msg % args)
 
         class DummyApp:
-            log_interval = 5.0
+            interval = 5.0
             hide_env = ('paste.cookies', 'HTTP_COOKIE')
             log = DummyLogger()
 

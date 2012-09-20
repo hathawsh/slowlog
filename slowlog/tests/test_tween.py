@@ -187,7 +187,7 @@ class TestTweenRequestLogger(unittest.TestCase):
         from slowlog.tween import TweenRequestLogger
         return TweenRequestLogger
 
-    def _make(self, ident=None, request_method='POST'):
+    def _make(self, ident=None, method='POST'):
         self.logged = logged = []
 
         class DummyLogger:
@@ -195,15 +195,15 @@ class TestTweenRequestLogger(unittest.TestCase):
                 logged.append(msg % args)
 
         class DummyTween:
-            log_interval = 5.0
+            interval = 5.0
             hide_post_vars = ('password', 'HIDEME')
             log = DummyLogger()
 
         class DummyRequest:
             def __init__(self):
-                self.request_method = request_method
+                self.method = method
                 self.url = 'http://example.com/stuff?x=1'
-                if request_method == 'POST':
+                if method == 'POST':
                     self.POST = {'login': 'abc', 'password': '123'}
                 else:
                     self.POST = {}
@@ -231,7 +231,7 @@ class TestTweenRequestLogger(unittest.TestCase):
         self.assertNotIn('Stack:', self.logged[0])
 
     def test_call_with_first_report_as_get(self):
-        obj = self._make(request_method='GET')
+        obj = self._make(method='GET')
         obj()
         self.assertEqual(len(self.logged), 1)
         self.assertIn('GET http://example.com/stuff?x=1', self.logged[0])
