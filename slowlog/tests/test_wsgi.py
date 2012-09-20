@@ -216,7 +216,7 @@ class TestSlowRequestLogger(unittest.TestCase):
         from slowlog.wsgi import SlowRequestLogger
         return SlowRequestLogger
 
-    def _make(self, ident=None):
+    def _make(self, ident=None, frame_limit=100):
         self.logged = logged = []
 
         class DummyLogger:
@@ -227,6 +227,9 @@ class TestSlowRequestLogger(unittest.TestCase):
             interval = 5.0
             hide_env = ('paste.cookies', 'HTTP_COOKIE')
             log = DummyLogger()
+
+            def __init__(self):
+                self.frame_limit = frame_limit
 
         app = DummyApp()
         environ = {'REQUEST_METHOD': 'POST',
@@ -254,7 +257,7 @@ class TestSlowRequestLogger(unittest.TestCase):
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertIn('<hidden>', self.logged[0])
-        self.assertNotIn('Stack:', self.logged[0])
+        self.assertNotIn('Traceback:', self.logged[0])
 
     def test_call_with_subsequent_report(self):
         obj = self._make()
@@ -263,15 +266,23 @@ class TestSlowRequestLogger(unittest.TestCase):
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
         self.assertNotIn('<hidden>', self.logged[0])
-        self.assertNotIn('Stack:', self.logged[0])
+        self.assertNotIn('Traceback:', self.logged[0])
 
-    def test_call_with_frame(self):
+    def test_call_with_traceback_shown(self):
         obj = self._make()
         frame = sys._getframe()
         obj(frame)
         self.assertEqual(len(self.logged), 1)
         self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
-        self.assertIn('Stack:', self.logged[0])
+        self.assertIn('Traceback:', self.logged[0])
+
+    def test_call_with_traceback_hidden(self):
+        obj = self._make(frame_limit=0)
+        frame = sys._getframe()
+        obj(frame)
+        self.assertEqual(len(self.logged), 1)
+        self.assertIn('POST http://example.com/stuff?x=1', self.logged[0])
+        self.assertNotIn('Traceback:', self.logged[0])
 
 
 class TestHidden(unittest.TestCase):

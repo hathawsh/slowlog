@@ -47,10 +47,12 @@ class SlowLogApp(object):
     """Log slow requests in a manner similar to Products.LongRequestLogger.
     """
     def __init__(self, next_app, timeout=2.0, interval=1.0, logfile=None,
+                 frame_limit=100,
                  hide_env=('HTTP_COOKIE', 'paste.cookies', 'beaker.session')):
         self.next_app = next_app
         self.timeout = timeout
         self.interval = interval
+        self.frame_limit = frame_limit
         if logfile:
             self.log = make_file_logger(logfile)
         else:
@@ -110,11 +112,13 @@ class SlowRequestLogger(object):
             self.logged_first = True
 
         if frame is not None:
-            tb = StringIO()
-            tb.write('Stack:\n')
-            traceback.print_stack(frame, file=tb)
+            limit = self.app.frame_limit
+            if limit > 0:
+                tb = StringIO()
+                tb.write('Traceback:\n')
+                traceback.print_stack(frame, limit=limit, file=tb)
+                lines.append(tb.getvalue())
             del frame
-            lines.append(tb.getvalue())
 
         log = self.app.log
         log.warning("Thread %s: Started on %.1f; "

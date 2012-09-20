@@ -46,8 +46,8 @@ class TestMonitor(unittest.TestCase):
             def empty(self):
                 return True
 
-            def get(self, timeout):
-                queue_gets.append(timeout)
+            def get(self, block=True, timeout=None):
+                queue_gets.append((block, timeout))
                 # Return the stop signal
                 return None
 
@@ -103,7 +103,7 @@ class TestMonitor(unittest.TestCase):
         obj.run()
         self.assertEqual(len(self.queue_gets), 1)
         t = self.queue_gets[0]
-        self.assertIsNone(t)
+        self.assertEqual(t, (True, None))
 
     def test_run_with_future_reporters(self):
         now = time.time()
@@ -117,7 +117,7 @@ class TestMonitor(unittest.TestCase):
 
         obj.run()
         self.assertEqual(len(self.queue_gets), 1)
-        t = self.queue_gets[0]
+        t = self.queue_gets[0][1]
         self.assertGreater(t, 0)
         self.assertLess(t, 1800.0)
 
@@ -137,7 +137,7 @@ class TestMonitor(unittest.TestCase):
         self.assertEqual(self.reported, [None, None])
 
         self.assertEqual(len(self.queue_gets), 1)
-        t = self.queue_gets[0]
+        t = self.queue_gets[0][1]
         self.assertGreater(t, 0)
         self.assertLess(t, 1800.0)
 
@@ -171,7 +171,7 @@ class TestMonitor(unittest.TestCase):
         self.assertIsNotNone(frame.f_code.co_name)
 
         self.assertEqual(len(self.queue_gets), 1)
-        t = self.queue_gets[0]
+        t = self.queue_gets[0][1]
         self.assertGreater(t, 20.0)
         self.assertLess(t, 30.0)
 
@@ -191,7 +191,7 @@ class TestMonitor(unittest.TestCase):
         self.assertIsNone(frame)
 
         self.assertEqual(len(self.queue_gets), 1)
-        t = self.queue_gets[0]
+        t = self.queue_gets[0][1]
         self.assertGreater(t, 20.0)
         self.assertLess(t, 30.0)
 
@@ -204,8 +204,8 @@ class TestMonitor(unittest.TestCase):
             def empty(self):
                 return True
 
-            def get(self, timeout):
-                queue_gets.append(timeout)
+            def get(self, block, timeout):
+                queue_gets.append((block, timeout))
                 item = queue_contents.pop(0)
                 if item is None:
                     return None
@@ -227,11 +227,11 @@ class TestMonitor(unittest.TestCase):
 
         self.assertEqual(len(queue_gets), 2)
 
-        t = queue_gets[0]
+        t = queue_gets[0][1]
         self.assertGreater(t, 20.0)
         self.assertLess(t, 30.0)
 
-        t = queue_gets[1]
+        t = queue_gets[1][1]
         self.assertGreater(t, 20.0)
         self.assertLess(t, 30.0)
 

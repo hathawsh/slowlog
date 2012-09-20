@@ -42,6 +42,7 @@ class SlowLogTween(object):
         settings = registry.settings
         self.timeout = float(settings.get('slowlog_timeout', 2.0))
         self.interval = float(settings.get('slowlog_interval', 1.0))
+        self.frame_limit = int(settings.get('slowlog_frames', 100))
         logfile = settings.get('slowlog_file')
         if logfile:
             self.log = make_file_logger(logfile)
@@ -85,21 +86,23 @@ class TweenRequestLogger(object):
         lines = ['request: %s %s' % (request.method, request.url)]
 
         if not self.logged_first:
-            if request.POST:
-                post = {}
-                post.update(request.POST)
+            if request.method == 'POST':
+                postdata = {}
+                postdata.update(request.POST)
                 for key in self.tween.hide_post_vars:
-                    if key in post:
-                        post[key] = Hidden()
-                lines.append('post: %s' % pformat(post))
+                    if key in postdata:
+                        postdata[key] = Hidden()
+                lines.append('post: %s' % pformat(postdata))
             self.logged_first = True
 
         if frame is not None:
-            tb = StringIO()
-            tb.write('Stack:\n')
-            traceback.print_stack(frame, file=tb)
+            limit = self.tween.frame_limit
+            if limit > 0:
+                tb = StringIO()
+                tb.write('Traceback:\n')
+                traceback.print_stack(frame, limit=limit, file=tb)
+                lines.append(tb.getvalue())
             del frame
-            lines.append(tb.getvalue())
 
         log = self.tween.log
         msg = '\n'.join(lines)

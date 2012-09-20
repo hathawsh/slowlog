@@ -51,7 +51,8 @@ class Monitor(Thread):
 
             while True:
                 if not queue.empty():
-                    timeout = 0
+                    block = False
+                    timeout = None
                 elif self.reporters:
                     now = time.time()
                     timeout_at = now + 3600.0
@@ -67,13 +68,15 @@ class Monitor(Thread):
                                 log.exception("Error in reporter %s", reporter)
                         timeout_at = min(timeout_at, reporter.report_at)
                     frames = None  # Free memory
+                    block = True
                     timeout = max(self.min_interval, timeout_at - now)
                 else:
                     # Wait for a reporter.
+                    block = True
                     timeout = None
 
                 try:
-                    item = queue.get(timeout)
+                    item = queue.get(block, timeout)
                 except Empty:
                     pass
                 else:
@@ -85,6 +88,7 @@ class Monitor(Thread):
                         self.reporters.add(reporter)
                     else:
                         self.reporters.discard(reporter)
+
         finally:
             global _monitor
             if _monitor_lock is not None:
