@@ -1,4 +1,6 @@
+
 from perfmetrics import statsd_client_stack
+import thread
 import time
 
 try:
@@ -60,6 +62,11 @@ class Test_report_framestats(unittest.TestCase):
     def test_without_statsd_client(self):
         self._call(object())
 
+    def test_with_empty_frame(self):
+        self._register_statsd_client()
+        self._call(None)
+        self.assertEqual(len(self.sentbufs), 0)
+
     def test_with_short_stack(self):
         self._register_statsd_client()
         frame = self._make_frame_stack(3)
@@ -94,11 +101,17 @@ class TestFrameStatsReporter(unittest.TestCase):
         from slowlog.framestats import FrameStatsReporter
         return FrameStatsReporter
 
-    def test_ctor(self):
+    def test_ctor_with_default_ident(self):
         obj = self._class(123456789, 1.5)
         self.assertEqual(obj.report_at, 123456789)
         self.assertEqual(obj.interval, 1.5)
-        self.assertTrue(obj.ident)
+        self.assertEqual(obj.ident, thread.get_ident())
+
+    def test_ctor_with_specified_ident(self):
+        obj = self._class(123456789, 1.5, ident=54321)
+        self.assertEqual(obj.report_at, 123456789)
+        self.assertEqual(obj.interval, 1.5)
+        self.assertEqual(obj.ident, 54321)
 
     def test_call_without_frame(self):
         obj = self._class(123456789, 1.5)

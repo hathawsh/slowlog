@@ -121,21 +121,20 @@ class TestMonitor(unittest.TestCase):
         self.assertGreater(t, 0)
         self.assertLess(t, 1800.0)
 
-    def test_run_with_an_immediate_reporter_and_a_postponed_reporter(self):
+    def test_run_with_an_immediate_reporters(self):
         now = time.time()
         obj = self._make()
         obj.queue = self._make_nosleep_queue()
 
         reporter1 = self._make_reporter(report_at=now)
         obj.reporters.add(reporter1)
-        reporter2 = self._make_reporter(report_at=now + 1800.0)
+        reporter2 = self._make_reporter(report_at=now)
         obj.reporters.add(reporter2)
 
         obj.run()
 
-        self.assertEqual(len(self.reported), 1)
-        frame = self.reported[0]
-        self.assertIsNone(frame)
+        self.assertEqual(len(self.reported), 2)
+        self.assertEqual(self.reported, [None, None])
 
         self.assertEqual(len(self.queue_gets), 1)
         t = self.queue_gets[0]
@@ -267,3 +266,10 @@ class Test_get_monitor(unittest.TestCase):
         monitor1.stop()
         monitor2 = self._call()
         self.assertIsNot(monitor1, monitor2)
+
+    def test_delete_monitor_on_stop(self):
+        monitor = self._call()
+        monitor.queue.put(None)
+        monitor.join()
+        from slowlog.monitor import _monitor
+        self.assertIsNone(_monitor)

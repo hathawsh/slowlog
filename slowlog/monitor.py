@@ -10,8 +10,8 @@ import time
 log = logging.getLogger(__name__)
 
 
-class Reporter(object):
-    """Reporter interface.
+class ReporterInterface(object):
+    """The interface of Reporter objects.
 
     Create an object that provides this interface, then add it to the
     current Monitor before doing something; remove it when done.
@@ -19,7 +19,7 @@ class Reporter(object):
     ident = 0      # thread.get_ident()
     report_at = 0  # a Unix time
 
-    def __call__(self, frame=None):
+    def __call__(self, frame=None):  # pragma no cover
         """Report the thread's current activity.
 
         This may include logging the stack or reporting statistics.
@@ -94,6 +94,8 @@ class Monitor(Thread):
                         _monitor = None
                 finally:
                     _monitor_lock.release()
+            else:
+                pass  # pragma no cover
 
     def stop(self):
         global _monitor
@@ -115,6 +117,8 @@ def get_monitor():
             if _monitor is None:
                 _monitor = Monitor()
                 _monitor.start()
+            else:
+                pass  # pragma no cover
         finally:
             _monitor_lock.release()
     return _monitor
