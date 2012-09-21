@@ -43,7 +43,7 @@ class Test_make_file_logger(unittest.TestCase):
         self.assertIs(logger.handlers[0], logfile)
 
     def test_with_open_file(self):
-        from StringIO import StringIO
+        from slowlog.compat import StringIO
         logfile = StringIO()
         logger = self._call(logfile)
         self.assertIs(logger.handlers[0].stream, logfile)

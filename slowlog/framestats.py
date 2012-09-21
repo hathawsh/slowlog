@@ -1,6 +1,6 @@
 
 from perfmetrics import statsd_client
-from thread import get_ident
+from slowlog.compat import get_ident
 
 
 def report_framestats(frame, limit=100, max_buf=1000):

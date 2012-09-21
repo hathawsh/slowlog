@@ -142,17 +142,19 @@ class TestMonitor(unittest.TestCase):
 
     def test_run_with_real_frame(self):
         # Start a thread and sample a frame from it.
-        from Queue import Queue
-        import thread
+        from slowlog.compat import Queue
+        from slowlog.compat import get_ident
+        import threading
 
         start_queue = Queue()
         end_queue = Queue()
 
         def run():
-            start_queue.put(thread.get_ident())
+            start_queue.put(get_ident())
             end_queue.get()
 
-        thread.start_new_thread(run, ())
+        th = threading.Thread(target=run)
+        th.start()
         try:
             ident = start_queue.get()  # Wait for the thread to start.
             obj = self._make()
@@ -162,6 +164,7 @@ class TestMonitor(unittest.TestCase):
             obj.run(time=lambda: 1234.1)
         finally:
             end_queue.put(None)  # Let the thread end.
+        th.join()
 
         self.assertEqual(len(self.reported), 1)
         report_time, frame = self.reported[0]
@@ -191,7 +194,7 @@ class TestMonitor(unittest.TestCase):
         self.assertEqual(t, 10.0)
 
     def test_run_when_timeout_reached(self):
-        from Queue import Empty
+        from slowlog.compat import Empty
         queue_gets = []
         queue_contents = [Empty(), None]
 

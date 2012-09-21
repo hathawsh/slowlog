@@ -1,6 +1,5 @@
 
 from perfmetrics import statsd_client_stack
-import thread
 
 try:
     import unittest2 as unittest
@@ -115,10 +114,12 @@ class TestFrameStatsReporter(unittest.TestCase):
         return FrameStatsReporter
 
     def test_ctor_with_default_ident(self):
+        from slowlog.compat import get_ident
+
         obj = self._class(123456789, 1.5)
         self.assertEqual(obj.report_at, 123456789)
         self.assertEqual(obj.interval, 1.5)
-        self.assertEqual(obj.ident, thread.get_ident())
+        self.assertEqual(obj.ident, get_ident())
 
     def test_ctor_with_specified_ident(self):
         obj = self._class(123456789, 1.5, ident=54321)

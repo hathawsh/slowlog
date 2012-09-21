@@ -1,10 +1,10 @@
 
-from cStringIO import StringIO
 from pprint import pformat
+from slowlog.compat import StringIO
+from slowlog.compat import get_ident
 from slowlog.framestats import FrameStatsReporter
 from slowlog.logfile import make_file_logger
 from slowlog.monitor import get_monitor
-from thread import get_ident
 import logging
 import time
 import traceback

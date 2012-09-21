@@ -3,8 +3,8 @@
 import os
 import sys
 import tempfile
-import thread
 import time
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -219,7 +219,8 @@ class TestTweenRequestLogger(unittest.TestCase):
 
     def test_ctor_with_default_ident(self):
         obj = self._make()
-        self.assertEqual(obj.ident, thread.get_ident())
+        from slowlog.compat import get_ident
+        self.assertEqual(obj.ident, get_ident())
 
     def test_ctor_with_specified_ident(self):
         obj = self._make(ident=543)

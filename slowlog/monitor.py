@@ -1,7 +1,7 @@
 
-from Queue import Empty
-from Queue import Queue
-from thread import allocate_lock
+from slowlog.compat import Empty
+from slowlog.compat import Queue
+from threading import Lock
 from threading import Thread
 import logging
 import sys
@@ -114,7 +114,7 @@ class Monitor(Thread):
 
 
 _monitor = None
-_monitor_lock = allocate_lock()
+_monitor_lock = Lock()
 
 
 def get_monitor():

@@ -1,14 +1,15 @@
 
-from cStringIO import StringIO
 from pprint import pformat
+from slowlog.compat import StringIO
+from slowlog.compat import get_ident
+from slowlog.compat import quote
 from slowlog.framestats import FrameStatsReporter
 from slowlog.logfile import make_file_logger
 from slowlog.monitor import get_monitor
-from thread import get_ident
 import logging
 import time
 import traceback
-import urllib
+
 
 default_log = logging.getLogger('slowlog.wsgi')
 
@@ -165,8 +166,8 @@ def construct_url(environ):
             if port != '80':
                 append(':%s' % port)
 
-    append(urllib.quote(environ.get('SCRIPT_NAME','')))
-    append(urllib.quote(environ.get('PATH_INFO','')))
+    append(quote(environ.get('SCRIPT_NAME','')))
+    append(quote(environ.get('PATH_INFO','')))
     if environ.get('QUERY_STRING'):
         append('?%s' % environ['QUERY_STRING'])
     return ''.join(parts)
