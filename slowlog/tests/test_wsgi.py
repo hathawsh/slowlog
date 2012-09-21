@@ -19,7 +19,7 @@ class TestFrameStatsApp(unittest.TestCase):
         from slowlog.wsgi import FrameStatsApp
         return FrameStatsApp
 
-    def _make(self, app_error=None):
+    def _make(self, app_error=None, statsd_uri='statsd://localhost:9999'):
         self.ops = ops = []
 
         def dummy_app(environ, start_response):
@@ -36,7 +36,7 @@ class TestFrameStatsApp(unittest.TestCase):
             def remove(self, reporter):
                 ops.append(('remove', reporter))
 
-        obj = self._class(dummy_app)
+        obj = self._class(dummy_app, statsd_uri)
         obj.get_monitor = DummyMonitor
         return obj
 
@@ -95,7 +95,8 @@ class Test_make_framestats(unittest.TestCase):
         def dummy_app(environ, start_response):
             pass
 
-        obj = self._call(dummy_app, {}, interval='0.02')
+        obj = self._call(dummy_app, {}, interval='0.02',
+                         statsd_uri='statsd://localhost:9999')
         self.assertIs(obj.next_app, dummy_app)
         self.assertEqual(obj.timeout, 2.0)
         self.assertEqual(obj.interval, 0.02)

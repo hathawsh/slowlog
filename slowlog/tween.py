@@ -1,4 +1,5 @@
 
+from perfmetrics import statsd_client_from_uri
 from pprint import pformat
 from slowlog.compat import StringIO
 from slowlog.compat import get_ident
@@ -19,15 +20,17 @@ class FrameStatsTween(object):
     def __init__(self, handler, registry):
         self.handler = handler
         settings = registry.settings
+        statsd_uri = settings['statsd_uri']
+        self.client = statsd_client_from_uri(statsd_uri)
         self.timeout = float(settings.get('framestats_timeout', 2.0))
         self.interval = float(settings.get('framestats_interval', 1.0))
-        self.frame_limit = int(settings.get('framestats_limit', 100))
+        self.frame_limit = int(settings.get('framestats_frames', 100))
         self.get_monitor = get_monitor  # testing hook
 
     def __call__(self, request):
         monitor = self.get_monitor()
         report_at = time.time() + self.timeout
-        reporter = FrameStatsReporter(report_at, self.interval,
+        reporter = FrameStatsReporter(self.client, report_at, self.interval,
                                       self.frame_limit)
         monitor.add(reporter)
         try:

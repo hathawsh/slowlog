@@ -1,14 +1,9 @@
 
-from perfmetrics import statsd_client
 from slowlog.compat import get_ident
 
 
-def report_framestats(frame, limit=100, max_buf=1000):
-    """Send info about a frame to the configured Statsd server"""
-    client = statsd_client()
-    if client is None:
-        return
-
+def report_framestats(client, frame, limit=100, max_buf=1000):
+    """Send info about a frame to a Statsd server"""
     f = frame
     buf = []
     bytecount = 0
@@ -20,8 +15,8 @@ def report_framestats(frame, limit=100, max_buf=1000):
             name = '%s.%s' % (modname, co.co_name)
             # Record the frame stats in 2 forms, hierarchical and flat,
             # to make the stats easy to browse.
-            client.incr('slowlog.%s' % name, buf=buf)
-            client.incr('slowlog._.%s' % name.replace('.', '_'), buf=buf)
+            client.incr('framestats.%s' % name, buf=buf)
+            client.incr('framestats._.%s' % name.replace('.', '_'), buf=buf)
             bytecount += len(buf[-2]) + len(buf[-1]) + 2
             if bytecount >= max_buf:
                 client.sendbuf(buf[:-2])
@@ -37,7 +32,9 @@ def report_framestats(frame, limit=100, max_buf=1000):
 class FrameStatsReporter(object):
     """Reporter that calls report_framestats"""
 
-    def __init__(self, report_at, interval, frame_limit=100, ident=None):
+    def __init__(self, client, report_at, interval, frame_limit=100,
+                 ident=None):
+        self.client = client
         self.report_at = report_at
         self.interval = interval
         if ident is None:
@@ -48,4 +45,4 @@ class FrameStatsReporter(object):
     def __call__(self, _report_time, frame=None,
                  report_framestats=report_framestats):
         if frame is not None:
-            report_framestats(frame, self.frame_limit)
+            report_framestats(self.client, frame, self.frame_limit)

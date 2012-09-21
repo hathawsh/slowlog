@@ -1,4 +1,5 @@
 
+from perfmetrics import statsd_client_from_uri
 from pprint import pformat
 from slowlog.compat import StringIO
 from slowlog.compat import get_ident
@@ -20,8 +21,10 @@ class FrameStatsApp(object):
     Increments a counter for each frame currently involved in the request.
     Counters for slow code will increase more quickly than fast code.
     """
-    def __init__(self, next_app, timeout=2.0, interval=1.0, frame_limit=100):
+    def __init__(self, next_app, statsd_uri, timeout=2.0, interval=1.0,
+                 frame_limit=100):
         self.next_app = next_app
+        self.client = statsd_client_from_uri(statsd_uri)
         self.timeout = timeout
         self.interval = interval
         self.frame_limit = frame_limit
@@ -30,7 +33,7 @@ class FrameStatsApp(object):
     def __call__(self, environ, start_response):
         monitor = self.get_monitor()
         report_at = time.time() + self.timeout
-        reporter = FrameStatsReporter(report_at, self.interval,
+        reporter = FrameStatsReporter(self.client, report_at, self.interval,
                                       self.frame_limit)
         monitor.add(reporter)
         try:
@@ -41,9 +44,11 @@ class FrameStatsApp(object):
 
 def make_framestats(next_app, _globals, **kw):
     """Paste entry point for creating a FrameStatsApp"""
+    statsd_uri = kw['statsd_uri']
     timeout = float(kw.get('timeout', 2.0))
     interval = float(kw.get('interval', 1.0))
-    return FrameStatsApp(next_app, timeout=timeout, interval=interval)
+    return FrameStatsApp(next_app, statsd_uri,
+                         timeout=timeout, interval=interval)
 
 
 class SlowLogApp(object):

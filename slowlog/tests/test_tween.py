@@ -30,7 +30,8 @@ class TestFrameStatsTween(unittest.TestCase):
 
         class DummyRegistry:
             def __init__(self):
-                self.settings = settings or {}
+                self.settings = settings or {'statsd_uri':
+                                             'statsd://localhost:9999'}
 
         class DummyMonitor:
             def add(self, reporter):
@@ -50,7 +51,8 @@ class TestFrameStatsTween(unittest.TestCase):
 
     def test_ctor_with_custom_settings(self):
         obj = self._make(settings={'framestats_timeout': '2.1',
-                                   'framestats_interval': '0.125'})
+                                   'framestats_interval': '0.125',
+                                   'statsd_uri': 'statsd://localhost:9999'})
         self.assertEqual(obj.timeout, 2.1)
         self.assertEqual(obj.interval, 0.125)
 
