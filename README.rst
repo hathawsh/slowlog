@@ -3,8 +3,8 @@ Introduction
 ============
 
 The slowlog library helps you find out why certain code paths are slow.
-It works in a WSGI environment, as a Pyramid tween, or as a simple
-context manager or decorator.  It is inspired by Products.LongRequestLogger.
+It works as a Pyramid tween or as a WSGI component.  It is inspired
+by Products.LongRequestLogger.
 
 The library can log stack frames like Products.LongRequestLogger does,
 but it can also log frame statistics to Graphite using Statsd, making it
@@ -15,7 +15,8 @@ The library works by creating a monitor thread.  Other threads add
 call loggers to the monitor thread and the monitor thread calls
 those loggers periodically if the call lasts longer than a timeout.
 The sys._current_frames() function is used to gather stack traces, so
-not all Python implementations are supported.
+CPython versions 2.6+ and 3.2+ are supported, but other Python
+implementations might not work.
 
 Usage
 =====
