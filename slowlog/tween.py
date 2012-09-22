@@ -32,6 +32,7 @@ class FrameStatsTween(object):
         report_at = time.time() + self.timeout
         reporter = FrameStatsReporter(self.client, report_at, self.interval,
                                       self.frame_limit)
+        __slowlog_barrier__ = True
         monitor.add(reporter)
         try:
             return self.handler(request)
@@ -63,6 +64,7 @@ class SlowLogTween(object):
         now = time.time()
         report_at = now + self.timeout
         logger = TweenRequestLogger(self, request, now, report_at)
+        __slowlog_barrier__ = True
         monitor.add(logger)
         try:
             return self.handler(request)

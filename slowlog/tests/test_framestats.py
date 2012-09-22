@@ -15,8 +15,8 @@ class Test_report_framestats(unittest.TestCase):
         self.sentbufs = sentbufs = []
 
         class DummyStatsdClient:
-            def incr(self, name, buf):
-                buf.append('%s|c' % name)
+            def incr(self, name, amount, buf):
+                buf.append('%s:%s|c' % (name, amount))
 
             def sendbuf(self, buf):
                 sentbufs.append('\n'.join(buf))
@@ -34,6 +34,7 @@ class Test_report_framestats(unittest.TestCase):
             def __init__(self, i):
                 self.f_code = DummyCode(i)
                 self.f_globals = {'__name__': 'dummy.module%d' % i}
+                self.f_locals = {}
 
         current_frame = None
         f = None
@@ -59,14 +60,27 @@ class Test_report_framestats(unittest.TestCase):
         frame = self._make_frame_stack(3)
         self._call(client, frame)
         self.assertEqual(len(self.sentbufs), 1)
-        expect = ['framestats.dummy.module3.dummy_name_3|c',
-                  'framestats._.dummy_module3_dummy_name_3|c',
-                  'framestats.dummy.module2.dummy_name_2|c',
-                  'framestats._.dummy_module2_dummy_name_2|c',
-                  'framestats.dummy.module1.dummy_name_1|c',
-                  'framestats._.dummy_module1_dummy_name_1|c',
+        expect = ['framestats.dummy.module3.dummy_name_3:1|c',
+                  'framestats._.dummy_module3_dummy_name_3:1|c',
+                  'framestats.dummy.module2.dummy_name_2:0.667|c',
+                  'framestats._.dummy_module2_dummy_name_2:0.667|c',
+                  'framestats.dummy.module1.dummy_name_1:0.333|c',
+                  'framestats._.dummy_module1_dummy_name_1:0.333|c',
                   ]
         self.assertEqual(self.sentbufs[0].splitlines(), expect)
+
+    def test_with_barrier(self):
+        client = self._make_statsd_client()
+        frame = self._make_frame_stack(4)
+        frame.f_back.f_locals['__slowlog_barrier__'] = True
+        self._call(client, frame)
+        self.assertEqual(len(self.sentbufs), 1)
+        expect = ['framestats.dummy.module4.dummy_name_4:1|c',
+                  'framestats._.dummy_module4_dummy_name_4:1|c',
+                  'framestats.dummy.module3.dummy_name_3:0.5|c',
+                  'framestats._.dummy_module3_dummy_name_3:0.5|c',
+                  ]
+        self.assertEqual(expect, self.sentbufs[0].splitlines())
 
     def test_with_long_stack(self):
         client = self._make_statsd_client()
@@ -75,9 +89,9 @@ class Test_report_framestats(unittest.TestCase):
         self.assertEqual(len(self.sentbufs), 2)
         # Send innermost frames first because they are probably more
         # important.
-        self.assertIn('framestats.dummy.module20.dummy_name_20|c',
+        self.assertIn('framestats.dummy.module20.dummy_name_20:1|c',
                       self.sentbufs[0])
-        self.assertIn('framestats.dummy.module1.dummy_name_1|c',
+        self.assertIn('framestats.dummy.module1.dummy_name_1:0.05|c',
                       self.sentbufs[1])
 
     def test_with_frame_lacking_module_name(self):
@@ -87,10 +101,12 @@ class Test_report_framestats(unittest.TestCase):
         frame.f_back.f_globals = {}
         self._call(client, frame)
         self.assertEqual(len(self.sentbufs), 1)
-        expect = ['framestats.dummy.module3.dummy_name_3|c',
-                  'framestats._.dummy_module3_dummy_name_3|c',
-                  'framestats.dummy.module1.dummy_name_1|c',
-                  'framestats._.dummy_module1_dummy_name_1|c',
+        expect = ['framestats.dummy.module3.dummy_name_3:1|c',
+                  'framestats._.dummy_module3_dummy_name_3:1|c',
+                  'framestats.(module).dummy_name_2:0.667|c',
+                  'framestats._.(module)_dummy_name_2:0.667|c',
+                  'framestats.dummy.module1.dummy_name_1:0.333|c',
+                  'framestats._.dummy_module1_dummy_name_1:0.333|c',
                   ]
         self.assertEqual(self.sentbufs[0].splitlines(), expect)
 
