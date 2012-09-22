@@ -3,12 +3,12 @@ from perfmetrics import statsd_client_from_uri
 from pprint import pformat
 from slowlog.compat import StringIO
 from slowlog.compat import get_ident
+from slowlog.exc import print_stack
 from slowlog.framestats import FrameStatsReporter
 from slowlog.logfile import make_file_logger
 from slowlog.monitor import get_monitor
 import logging
 import time
-import traceback
 
 
 class FrameStatsTween(object):
@@ -30,9 +30,9 @@ class FrameStatsTween(object):
     def __call__(self, request):
         monitor = self.get_monitor()
         report_at = time.time() + self.timeout
+        __slowlog_barrier__ = True
         reporter = FrameStatsReporter(self.client, report_at, self.interval,
                                       self.frame_limit)
-        __slowlog_barrier__ = True
         monitor.add(reporter)
         try:
             return self.handler(request)
@@ -63,8 +63,8 @@ class SlowLogTween(object):
         monitor = self.get_monitor()
         now = time.time()
         report_at = now + self.timeout
-        logger = TweenRequestLogger(self, request, now, report_at)
         __slowlog_barrier__ = True
+        logger = TweenRequestLogger(self, request, now, report_at)
         monitor.add(logger)
         try:
             return self.handler(request)
@@ -106,7 +106,7 @@ class TweenRequestLogger(object):
             if limit > 0:
                 tb = StringIO()
                 tb.write('Traceback:\n')
-                traceback.print_stack(frame, limit=limit, file=tb)
+                print_stack(frame, limit=limit, file=tb)
                 lines.append(tb.getvalue())
             del frame
 

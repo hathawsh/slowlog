@@ -4,12 +4,12 @@ from pprint import pformat
 from slowlog.compat import StringIO
 from slowlog.compat import get_ident
 from slowlog.compat import quote
+from slowlog.exc import print_stack
 from slowlog.framestats import FrameStatsReporter
 from slowlog.logfile import make_file_logger
 from slowlog.monitor import get_monitor
 import logging
 import time
-import traceback
 
 
 default_log = logging.getLogger('slowlog.wsgi')
@@ -33,6 +33,7 @@ class FrameStatsApp(object):
     def __call__(self, environ, start_response):
         monitor = self.get_monitor()
         report_at = time.time() + self.timeout
+        __slowlog_barrier__ = True
         reporter = FrameStatsReporter(self.client, report_at, self.interval,
                                       self.frame_limit)
         monitor.add(reporter)
@@ -72,6 +73,7 @@ class SlowLogApp(object):
         monitor = self.get_monitor()
         now = time.time()
         report_at = now + self.timeout
+        __slowlog_barrier__ = True
         logger = SlowRequestLogger(self, environ, now, report_at)
         monitor.add(logger)
         try:
@@ -123,7 +125,7 @@ class SlowRequestLogger(object):
             if limit > 0:
                 tb = StringIO()
                 tb.write('Traceback:\n')
-                traceback.print_stack(frame, limit=limit, file=tb)
+                print_stack(frame, limit=limit, file=tb)
                 lines.append(tb.getvalue())
             del frame
 
