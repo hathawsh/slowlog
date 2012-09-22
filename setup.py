@@ -15,7 +15,7 @@ README = open(os.path.join(here, 'README.rst')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
 setup(name='slowlog',
-      version='0.1',
+      version='0.9',
       author='Shane Hathaway',
       author_email='shane@hathawaymix.org',
       description="Log and graph slow Pyramid and WSGI apps",
