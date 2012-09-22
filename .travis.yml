@@ -5,6 +5,6 @@ python:
   - "2.6"
 install:
   - python setup.py develop
-  - pip install nose coverage pyramid
+  - pip install --use-mirrors nose coverage pyramid
 script:
     nosetests --with-coverage --cover-package=slowlog --cover-branches

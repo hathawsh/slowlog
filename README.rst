@@ -16,6 +16,11 @@ This library uses ``sys._current_frames()`` to gather stack traces, so
 it supports CPython versions 2.6+ and 3.2+, but other Python
 implementations might not work.
 
+|TravisBadge|_
+
+.. |TravisBadge| image:: https://secure.travis-ci.org/hathawsh/slowlog.png?branch=master
+.. _TravisBadge: http://travis-ci.org/hathawsh/slowlog
+
 Installation
 ============
 
